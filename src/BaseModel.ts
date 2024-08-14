@@ -1,9 +1,8 @@
 /**
  * @author: mike@arsenicsoup.com
  */
-const Logger = require('./utils/Logger')
-const _ = require('lodash')
-const Promise = require('bluebird')
+import _ from "lodash";
+//const Promise = require('bluebird')
 const BaseModelHelper = require('./utils/BaseModelHelper')
 const { v4: uuidv4 } = require('uuid');
 const UniqueKeyViolationError = require('./errors/UniqueKeyViolationError.js')

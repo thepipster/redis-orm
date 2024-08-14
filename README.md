@@ -9,7 +9,7 @@ This library came about from a project that required a massively scalable and fa
 To support this need, the RedisORM provides the following high level features;
 
 * Support for typical database queries.
-* Support for mosst common data types.
+* Support for most common data types.
 * Support for redis clusters.
 * Ability to export to, and import from, a Postgres database (other databases coming soon) - to allow the redis data to be shut down or stood up as needed.
 * Versioning to support concurrent read/writes on same object.

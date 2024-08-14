@@ -1,6 +1,6 @@
 "use strict";
 
-const Logger = require('./logger.js')
+const Logger = require('./Logger.js')
 const _ = require('lodash')
 const redis = require('redis');
 
