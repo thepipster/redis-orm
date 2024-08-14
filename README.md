@@ -56,29 +56,29 @@ offset
 
 ## Instance methods
 
-remove()
-save()
+* remove()
+* save()
 
 ## Static methods
 
-register()
-exists(id)
-count(query)
-distinct(field, query)
-remove(id)
-getField(query, field)
-setFieldById(id, field, val)
-setField(query, field, val)
-loadFromId(id)
-findOne(query)
-find(query)
-getIds(query)
+* register()
+* exists(id)
+* count(query)
+* distinct(field, query)
+* remove(id)
+* getField(query, field)
+* setFieldById(id, field, val)
+* setField(query, field, val)
+* loadFromId(id)
+* findOne(query)
+* find(query)
+* getIds(query)
 
 ## Utils Static Methods
 
-generateToken(length)
-generateMock()
-getUUID()
+* generateToken(length)
+* generateMock()
+* getUUID()
 
 ## Syncing
 
@@ -102,7 +102,7 @@ For example, this would sync a single user from redis to postgress
     }
 ```
 
-sync(PostgresModel)
-syncAllToPostgres(PostgresModel, opts)
-syncAllToRedis(PostgresModel, opts)
-syncAll(PostgresModel, opts)
+* sync(PostgresModel)
+* syncAllToPostgres(PostgresModel, opts)
+* syncAllToRedis(PostgresModel, opts)
+* syncAll(PostgresModel, opts)
