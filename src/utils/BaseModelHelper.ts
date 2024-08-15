@@ -1,13 +1,12 @@
-const { v4: uuidv4 } = require('uuid');
-const Chance = require('chance');
-const _ = require('lodash')
-const Logger = require('./Logger')
+import { v4 as uuidv4 } from 'uuid';
+import * as Chance from "Chance";
+import _ from "lodash";
 
-const BaseModelHelper = {
+export const BaseModelHelper = {
 
     prefix: 'orm',
     
-    sleep(ms) {
+    sleep(ms: number) {
         return new Promise(resolve => setTimeout(resolve, ms));
     },
 
@@ -129,7 +128,7 @@ const BaseModelHelper = {
      * @param {string} type The type to get; 'hash' for the hash object, 'index' for an index, 'meta' for meta info
      * @param {string} id The id of the model instance
      */
-    getKey(name, type, id){
+    getKey(name:string, type:string, id?:string){
         if (id){
             return `${BaseModelHelper.prefix}:{${name}:${type}:${id}}`
         }
@@ -220,7 +219,7 @@ const BaseModelHelper = {
                 case 'array':
                 case 'object':                           
                 case 'json':       
-                    //Logger.error(`Parsing ${typeof val} [${val}]`, _.isEmpty(val), !!val)                   
+                    //console.error(`Parsing ${typeof val} [${val}]`, _.isEmpty(val), !!val)                   
                     if (val && typeof val == 'string'){
                         try {
                             return JSON.parse(val)
@@ -265,14 +264,12 @@ const BaseModelHelper = {
             }
         }   
         catch(err){
-            Logger.error(err)
-            Logger.error('definition = ', definition)
-            Logger.error(`val = ${val} (type = ${typeof val})`)
+            console.error(err)
+            console.error('definition = ', definition)
+            console.error(`val = ${val} (type = ${typeof val})`)
             return null
         }
 
     }
 
 }
-
-module.exports = BaseModelHelper

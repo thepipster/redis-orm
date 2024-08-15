@@ -1,6 +1,6 @@
 //const {BaseModel, Logger} = require('../src');
-import {Column} from "../src/decorators/Column";
-import {Model} from "../src/decorators/Model";
+import {Column} from "../decorators/Column";
+import {Model} from "../Model";
 import redis from "redis";
 
 /*
@@ -40,12 +40,12 @@ class Session extends BaseModel {
 }
 */
 
+
 /**
  * Class to represent a session in the redis database.
  * Sessions hava a TTL, and will auto-delete after SESSION_TIME
  */
-@Model()
-class Session {
+class Session extends Model {
     
     @Column({index:true})
     uid: string = '';
@@ -56,7 +56,7 @@ class Session {
     @Column({defaultValue:'player'})
     role: string = '';
 
-    @Column({defaultValue:""})
+    @Column({defaultValue:"bob"})
     username: string = "";
 
     @Column({defaultValue:()=>{return Date.now()}})
@@ -70,9 +70,13 @@ class Session {
 
 }
 
+console.log('_modelExtended = ', Session._modelExtended());
+
+/*
 const redisDb = redis.createClient({ url: "redis://localhost/0" });
 
 let sesh = new Session();
+
 
 async function doTest(){
 
@@ -96,3 +100,4 @@ redisDb.once("connect", async (err) => {
         })
 
 })
+        */

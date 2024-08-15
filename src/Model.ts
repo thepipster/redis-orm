@@ -1,16 +1,21 @@
 import _ from "lodash";
-//const Promise = require('bluebird')
+import * as Promise from "bluebird";
 import {BaseModelHelper} from "./utils/BaseModelHelper";
 import { v4 as uuidv4 } from 'uuid';
 import {UniqueKeyViolationError} from "./errors/UniqueKeyViolationError";
+import {ModelMeta} from "./decorators/Column";
+import {type Field} from "./types";
 
 /**
  * Base Redis models, based on Nohm (https://maritz.github.io/nohm/)
  */
-class BaseModel {
+export class Model {
     
-    id: number = 0;
+    id: string = '';
     __v: number = 1;
+
+    ['constructor']: typeof Model
+
 
     /**
      * Base constructor. The model should be like;
@@ -98,13 +103,13 @@ class BaseModel {
     // ///////////////////////////////////////////////////////////////////////////////////////
 
     static getByKey(key){
-        throw new Error('BaseModel.getByKey is deprecated....')
+        throw new Error('Model.getByKey is deprecated....')
     }
 
     // ///////////////////////////////////////////////////////////////////////////////////////
 
     static setByKey(key, val){
-        throw new Error('BaseModel.setByKey is deprecated....')
+        throw new Error('Model.setByKey is deprecated....')
     }
 
     // ///////////////////////////////////////////////////////////////////////////////////////
@@ -115,7 +120,7 @@ class BaseModel {
      */
     static async exists(id){
         let key = BaseModelHelper.getKey(this._name(), 'hash', id)
-        return !!(await BaseModel._redisCommand('exists', key))
+        return !!(await Model._redisCommand('exists', key))
     }
 
     // ///////////////////////////////////////////////////////////////////////////////////////
@@ -147,19 +152,19 @@ class BaseModel {
             throw new Error(`Trying to remove document without an id!`)
         }
         
-        var modelName = this.constructor._name()
+        var modelName = this.constructor.name;
         var model = this.constructor._modelExtended()
 
         // Remove hash model
-        await BaseModel._redisCommand('del', BaseModelHelper.getKey(modelName, 'hash', this.id))
+        await Model._redisCommand('del', BaseModelHelper.getKey(modelName, 'hash', this.id))
 
         // Remove from the idset, which is an index that contains all id's for this model
         //Logger.debug(`Removing ${this.id} from idsets set ${BaseModelHelper.getKey(modelName, 'idsets')}`)
-        await BaseModel._redisCommand('srem', BaseModelHelper.getKey(modelName, 'idsets'), this.id)
+        await Model._redisCommand('srem', BaseModelHelper.getKey(modelName, 'idsets'), this.id)
 
         // Remove from the expires index, if there
         //Logger.debug(`Removing ${this.id} from expires set ${BaseModelHelper.getKey(modelName, 'expire')}`)
-        await BaseModel._redisCommand('zrem', BaseModelHelper.getKey(modelName, 'expire'), this.id)
+        await Model._redisCommand('zrem', BaseModelHelper.getKey(modelName, 'expire'), this.id)
 
         for (let field in model){
 
@@ -168,19 +173,19 @@ class BaseModel {
             if (model[field].index){
                 let key = `${BaseModelHelper.getKey(modelName, 'index')}:${field}:${val}`
                 //Logger.debug(`Removing ${this.id} from 'index' ${key}`)
-                await BaseModel._redisCommand('srem', key, this.id)
+                await Model._redisCommand('srem', key, this.id)
             }
 
             if (model[field].unique){
                 let key = `${BaseModelHelper.getKey(modelName, 'unique')}:${field}:${val}`
                 //Logger.debug(`Removing ${this.id} from 'unique' ${key}`)
-                await BaseModel._redisCommand('del', key, this.id)
+                await Model._redisCommand('del', key, this.id)
             }
 
             if (BaseModelHelper.isNumericType(model[field].type)){
                 let key = `${BaseModelHelper.getKey(modelName, 'scoredindex')}:${field}`
                 //Logger.debug(`Removing ${this.id} from 'scoredindex' ${key}`)
-                await BaseModel._redisCommand('zrem', key, this.id)
+                await Model._redisCommand('zrem', key, this.id)
             }
         }
 
@@ -194,7 +199,7 @@ class BaseModel {
      * @param {object} redisDb Redis connection
      */
     static setConnection(redisDb){
-        BaseModel.db = redisDb;
+        Model.db = redisDb;
     }
 
     // ///////////////////////////////////////////////////////////////////////////////////////
@@ -235,7 +240,7 @@ class BaseModel {
 
             try {
                 let key = BaseModelHelper.getKey(this._name(), 'hash', docId)
-                return await BaseModel._redisCommand('hget', key, field)
+                return await Model._redisCommand('hget', key, field)
             }
             catch(e){
                 Logger.error(e)
@@ -263,7 +268,7 @@ class BaseModel {
             let dbkey = BaseModelHelper.getKey(this._name(), 'hash', id)
 
             // Get the old val (need for updating indexes)
-            let oldVal = await BaseModel._redisCommand('hget', dbkey, field)
+            let oldVal = await Model._redisCommand('hget', dbkey, field)
             oldVal = BaseModelHelper.parseItem(model[field], oldVal)
 
             //Logger.debug(`oldVal = ${oldVal}, newVal = ${val}`)
@@ -273,7 +278,7 @@ class BaseModel {
 
             // Finally, do the update and return
             let parsedVal = BaseModelHelper.writeItem(model[field], val)    
-            return await BaseModel._redisCommand('hset', dbkey, field, parsedVal)
+            return await Model._redisCommand('hset', dbkey, field, parsedVal)
         }
         catch(e){
             Logger.error(e)
@@ -300,7 +305,7 @@ class BaseModel {
 
     async save(opts){
 
-        var modelName = this.constructor._name()
+        var modelName = this.constructor.name
         var model = this.constructor._modelExtended()
         var baseKey = BaseModelHelper.getKey(modelName, 'hash', this.id)
         var cmd = [baseKey]
@@ -339,7 +344,7 @@ class BaseModel {
 
                         var val = (model[key].type == 'string' && this[key]) ? this[key].toLowerCase() : this[key]
                         var keyUnique = `${BaseModelHelper.getKey(modelName, 'unique')}:${key}:${val}`
-                        var alreadyExistsId = await BaseModel._redisCommand('get', keyUnique)
+                        var alreadyExistsId = await Model._redisCommand('get', keyUnique)
 
                         //Logger.warn(`${key} (${keyUnique}) val = ${val}, exists? ${alreadyExistsId}`)
 
@@ -385,14 +390,14 @@ class BaseModel {
 
             await this._setIndices()
 
-            //await BaseModel._redisCommand('hmset', cmd)
-            await BaseModel._redisCommand('hmset', cmd)
+            //await Model._redisCommand('hmset', cmd)
+            await Model._redisCommand('hmset', cmd)
 
             // If this item expires, add to the expires index
             if (opts && opts.expires){            
                 let key = BaseModelHelper.getKey(modelName, 'expire')
                 let expireTime = Math.round(Date.now() / 1000) + opts.expires
-                await BaseModel._redisCommand('zadd', key, expireTime, this.id)
+                await Model._redisCommand('zadd', key, expireTime, this.id)
             }
 
             return this
@@ -419,7 +424,7 @@ class BaseModel {
 
             var model = this._modelExtended()
             var key = BaseModelHelper.getKey(this._name(), 'hash', id)
-            var data = await BaseModel._redisCommand('hgetall', key)
+            var data = await Model._redisCommand('hgetall', key)
             
             if (!data) {
                 //throw new Error(`${this.id} not found`);
@@ -552,7 +557,7 @@ class BaseModel {
         if (onlySets.length === 0 && onlyZSets.length === 0) {
             // no valid searches - return all ids
             let key = BaseModelHelper.getKey(modelName, 'idsets')
-            let ids = await BaseModel._redisCommand('smembers', key);
+            let ids = await Model._redisCommand('smembers', key);
             return (ids) ? ids : []
         }
         
@@ -632,7 +637,7 @@ class BaseModel {
         const model = this._modelExtended()
         let val = BaseModelHelper.writeItem(model[search.key], search.value)
         const key = `${BaseModelHelper.getKey(modelName, 'unique')}:${options.key}:${val}`;
-        const id = await BaseModel._redisCommand('get', key)
+        const id = await Model._redisCommand('get', key)
         if (id) {
             return [id];
         }
@@ -659,7 +664,7 @@ class BaseModel {
         }
 
         //Logger.warn('_setSearch', keys)
-        return BaseModel._redisCommand('sinter', keys)
+        return Model._redisCommand('sinter', keys)
     }
 
     // ///////////////////////////////////////////////////////////////////////////////////////
@@ -743,10 +748,10 @@ class BaseModel {
 
         if (options.limit) {
             //Logger.error(command, key, endpoints[0] + min, endpoints[1] + max, 'LIMIT', options.offset, options.limit)
-            return await BaseModel._redisCommand(command, key, endpoints[0] + min, endpoints[1] + max, 'LIMIT', options.offset, options.limit);
+            return await Model._redisCommand(command, key, endpoints[0] + min, endpoints[1] + max, 'LIMIT', options.offset, options.limit);
         }
         else {
-            return await BaseModel._redisCommand(command, key, endpoints[0] + min,options. endpoints[1] + max);
+            return await Model._redisCommand(command, key, endpoints[0] + min,options. endpoints[1] + max);
         }
     }
     
@@ -821,9 +826,9 @@ class BaseModel {
         try {
 
             let unixNow = Math.round(Date.now() / 1000) 
-            let modelName = this.constructor._name()
+            let modelName = this.constructor.name
             let key = BaseModelHelper.getKey(modelName, 'expire')
-            let expiredIds = await BaseModel._redisCommand('zrangebyscore', key, 0, unixNow)
+            let expiredIds = await Model._redisCommand('zrangebyscore', key, 0, unixNow)
 
             if (!expiredIds){
                 return
@@ -857,7 +862,7 @@ class BaseModel {
 
             var oldValues = {}
             var model = this.constructor._modelExtended()
-            var modelName = this.constructor._name()
+            var modelName = this.constructor.name
 
             oldValues = await this.constructor.loadFromId(this.id)
             
@@ -867,7 +872,7 @@ class BaseModel {
 
             var keyIdset = BaseModelHelper.getKey(modelName, 'idsets')
 
-            await BaseModel._redisCommand('sadd', keyIdset, this.id);
+            await Model._redisCommand('sadd', keyIdset, this.id);
 
             //for (var key in model){
             await Promise.map(Object.keys(model), async (key)=>{
@@ -938,10 +943,10 @@ class BaseModel {
             //Logger.debug(`Removing old unique '${key}' from '${modelName}.${id}'`)                
 
             if (isInDb){
-                await BaseModel._redisCommand('del', `${keyUnique}:${key}:${oldUniqueValue}`)
+                await Model._redisCommand('del', `${keyUnique}:${key}:${oldUniqueValue}`)
             }
             
-            await BaseModel._redisCommand('set', `${keyUnique}:${key}:${val}`, id)
+            await Model._redisCommand('set', `${keyUnique}:${key}:${val}`, id)
         }
     
         // set new normal index
@@ -949,17 +954,17 @@ class BaseModel {
             
             if (BaseModelHelper.isNumericType(definition.type)) {
                 // we use scored sets for things like "get all users older than 5"
-                await BaseModel._redisCommand('zadd', `${keyZindex}:${key}`, propVal, id)
+                await Model._redisCommand('zadd', `${keyZindex}:${key}`, propVal, id)
             }
 
             if (isInDb) {
                 //if (key == 'aBoolean'){
                 //    Logger.debug(`>>>>>>>>> Adding numeric index '${key}' to '${modelName}.${id}'; newValue: '${propVal}'; oldValue: '${oldValue}'.`)
                // }
-                await BaseModel._redisCommand('srem', `${keyIndex}:${key}:${oldValue}`, id)
+                await Model._redisCommand('srem', `${keyIndex}:${key}:${oldValue}`, id)
             }
 
-            await BaseModel._redisCommand('sadd', `${keyIndex}:${key}:${propVal}`, id);
+            await Model._redisCommand('sadd', `${keyIndex}:${key}:${propVal}`, id);
         }
         //else {
         //    Logger.error(`NOT adding index '${key}' to '${modelName}.${id}'; isInDb: '${isInDb}'; newValue: '${propVal}'; oldValue: '${oldValue}'.`)
@@ -976,14 +981,31 @@ class BaseModel {
      * if they don't already exist.
      */
     static _modelExtended(){
-        let fields = this._model()
-        if (!this._model){
-            throw new Error(`Could not find model for ${this._name()}`)
+        
+        const className = this.name;
+
+//        if (!ModelMeta.has(className)){
+        if (!ModelMeta[className]){
+            throw new Error(`Could not find model for ${className}`)
         }
+                
+        //ModelMeta[className].forEach(function(fieldInfo, name){
+        //    console.log(`_modelExtended() - [${className}] ${name}`, fieldInfo);        
+        //});
+
+        let metas:Field[] = ModelMeta[className];
+
+        let fields: any = {};
+
+        for (let i=0; i<metas.length; i+=1){
+            fields[metas[i].name] = metas[i];
+        }
+
         fields.created = {type: 'date', index: true, defaultValue: function(){return new Date()}}
         fields.modified = {type: 'date', onUpdateOverride: function(){return new Date()}}
         fields.__v = {type: 'integer', index: true, defaultValue: 1}
         return fields
+        
     }
 
     // ///////////////////////////////////////////////////////////////////////////////////////
@@ -995,7 +1017,7 @@ class BaseModel {
 
         return new Promise((resolve, reject) => {     
             
-            BaseModel.db[cmd](...args2, (err, obj)=>{
+            Model.db[cmd](...args2, (err, obj)=>{
                 if (err){
                     Logger.error('Error with ' + cmd, ...args)
                     Logger.error(err.toString())
@@ -1078,7 +1100,7 @@ class BaseModel {
     dataValues(){
         // Only give fields in the model
         let model = this.constructor._modelExtended()
-        //var modelName = this.constructor._name()      
+        //var modelName = this.constructor.name      
         let clean = {};
         for (var key in model){
             clean[key] = this[key];
@@ -1086,5 +1108,3 @@ class BaseModel {
         return clean;
     }
 }
-
-module.exports = BaseModel
