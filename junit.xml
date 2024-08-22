@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="7" failures="0" errors="0" time="1.557">
+  <testsuite name="Model:Redis:BaseModelHelper" errors="0" failures="0" skipped="0" timestamp="2024-08-22T20:30:33" time="1.535" tests="7">
+    <testcase classname="Model:Redis:BaseModelHelper generateToken()" name="Model:Redis:BaseModelHelper generateToken()" time="0.001">
+    </testcase>
+    <testcase classname="Model:Redis:BaseModelHelper isNumericType()" name="Model:Redis:BaseModelHelper isNumericType()" time="0">
+    </testcase>
+    <testcase classname="Model:Redis:BaseModelHelper getKey(id)" name="Model:Redis:BaseModelHelper getKey(id)" time="0">
+    </testcase>
+    <testcase classname="Model:Redis:BaseModelHelper parseBoolen()" name="Model:Redis:BaseModelHelper parseBoolen()" time="0">
+    </testcase>
+    <testcase classname="Model:Redis:BaseModelHelper parseItem()" name="Model:Redis:BaseModelHelper parseItem()" time="0.001">
+    </testcase>
+    <testcase classname="Model:Redis:BaseModelHelper writeItem()" name="Model:Redis:BaseModelHelper writeItem()" time="0">
+    </testcase>
+    <testcase classname="Model:Redis:BaseModelHelper getKey(null)" name="Model:Redis:BaseModelHelper getKey(null)" time="0">
+    </testcase>
+  </testsuite>
+</testsuites>

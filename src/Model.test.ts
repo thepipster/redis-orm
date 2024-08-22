@@ -1,10 +1,7 @@
-
-"use strict";
-
-const Settings = require("../../../Settings");
-const BaseModelHelper = require("./BaseModelHelper");
-const Logger = require("../../../utils/Logger");
-const Chance = require("chance");
+import { createConnection } from "./DatabaseHelper";
+import {BaseModelHelper} from "./utils/BaseModelHelper";
+import {Logger} from "./utils/Logger";
+import Chance from "chance";
 const chance = new Chance();
 
 Logger.setLevel("debug");
@@ -12,12 +9,10 @@ Logger.setLevel("debug");
 
 describe("Model:Redis:BaseModelHelper", () => {
 
-    beforeAll((done) => {
+    beforeAll(async () => {
 
         // Timeout to wait for redis connection
-        Settings.redisClient.once("connect", async (err) => {
-            done();
-        });
+        await createConnection({url:"redis://localhost/0"});
     });
 
     //afterAll(async () => {
@@ -62,7 +57,7 @@ describe("Model:Redis:BaseModelHelper", () => {
     });  
 
     test("parseBoolen()", async () => {        
-        expect(BaseModelHelper.parseBoolen()).toEqual(false);
+        expect(BaseModelHelper.parseBoolen(null)).toEqual(false);
         expect(BaseModelHelper.parseBoolen(1)).toEqual(true);
         expect(BaseModelHelper.parseBoolen("1")).toEqual(true);
         expect(BaseModelHelper.parseBoolen(0)).toEqual(false);

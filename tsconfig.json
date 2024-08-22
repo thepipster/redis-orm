@@ -30,6 +30,7 @@
     "exclude": [
         "coverage",
         "keys",
+        "src/deprecated",
         "node_modules",
         "dist"
     ]

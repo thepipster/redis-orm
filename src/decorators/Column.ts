@@ -10,13 +10,13 @@ export const ModelMeta = [];
 export function Column(params?: ColumnParams) {
     return function (target: Model, propertyKey) {
         
-        const t = Reflect.getMetadata('design:type', target, propertyKey);
+        const t = Reflect.getMetadata("design:type", target, propertyKey);
         const className = target.constructor.name;
 
-        let field: Field = {
+        const field: Field = {
             name: propertyKey.trim(),
             type: t.name.toLowerCase()            
-        }
+        };
 
         if (params && params.defaultValue){
             field.defaultValue = params.defaultValue;

@@ -1,7 +1,6 @@
 //const {BaseModel, Logger} = require('../src');
-import {Column} from "../decorators/Column";
-import {Model} from "../Model";
-import redis from "redis";
+import {Column, Model, createConnection} from "../index";
+
 
 /*
 class Session extends BaseModel {
@@ -40,37 +39,56 @@ class Session extends BaseModel {
 }
 */
 
+createConnection({url:"redis://localhost/0"});
 
-/**
- * Class to represent a session in the redis database.
- * Sessions hava a TTL, and will auto-delete after SESSION_TIME
- */
-class Session extends Model {
-    
-    @Column({index:true})
-    uid: string = '';
+setTimeout(async function(){
 
-    @Column()
-    lastIp: string = '';
+    /**
+     * Class to represent a session in the redis database.
+     * Sessions hava a TTL, and will auto-delete after SESSION_TIME
+     */
+    class Session extends Model {
+        
+        @Column({index:true})
+            uid: string = "";
 
-    @Column({defaultValue:'player'})
-    role: string = '';
+        @Column()
+            lastIp: string = "";
 
-    @Column({defaultValue:"bob"})
-    username: string = "";
+        @Column({defaultValue:"player"})
+            role: string = "";
 
-    @Column({defaultValue:()=>{return Date.now()}})
-    startEpoch: number;
+        @Column({defaultValue:"bob"})
+            username: string = "";
 
-    @Column({defaultValue: ()=>{Date.now()+3600}})
-    expiresEpoch: number;
+        @Column({defaultValue:()=>{return Date.now();}})
+            startEpoch: number;
 
-    @Column()
-    token: string;
+        @Column({defaultValue: ()=>{Date.now()+3600;}})
+            expiresEpoch: number;
 
-}
+        @Column()
+            token: string;
 
-console.log('_modelExtended = ', Session._modelExtended());
+    }
+
+    const sesh = new Session();
+    sesh.uid = "2";
+    sesh.lastIp = "127.0.0.1";
+    sesh.username = "bob";
+    sesh.startEpoch = Date.now();
+    sesh.expiresEpoch = Date.now() + 3600;
+    sesh.token = "EGogvMeMS6eq29opbte9FiDCko32";
+    await sesh.save();
+
+
+}, 500);
+
+
+
+
+
+//console.log("_modelExtended = ", Session._modelExtended());
 
 /*
 const redisDb = redis.createClient({ url: "redis://localhost/0" });

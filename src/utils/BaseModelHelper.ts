@@ -1,10 +1,10 @@
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 import * as Chance from "Chance";
 import _ from "lodash";
 
 export const BaseModelHelper = {
 
-    prefix: 'orm',
+    prefix: "orm",
     
     sleep(ms: number) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -17,13 +17,13 @@ export const BaseModelHelper = {
      */
     generateToken(length=24) {
 
-        let token = uuidv4().replace(/-/g,'')
+        let token = uuidv4().replace(/-/g,"");
 
         while (token.length < length){
-            token += uuidv4().replace(/-/g,'')
+            token += uuidv4().replace(/-/g,"");
         }
 
-        return token.substr(0,length)
+        return token.substr(0,length);
 
     },
 
@@ -31,6 +31,7 @@ export const BaseModelHelper = {
      * Generate random sample data for this class
      * @param {object} model The model 
      */
+    /*
     generateMock(model){
 
         let chance = new Chance()
@@ -120,6 +121,7 @@ export const BaseModelHelper = {
         
         return testInfo
     },
+    */
 
     /**
      * Get the underlying key in redis
@@ -130,74 +132,74 @@ export const BaseModelHelper = {
      */
     getKey(name:string, type:string, id?:string){
         if (id){
-            return `${BaseModelHelper.prefix}:{${name}:${type}:${id}}`
+            return `${BaseModelHelper.prefix}:{${name}:${type}:${id}}`;
         }
-        return `${BaseModelHelper.prefix}:{${name}:${type}}`
+        return `${BaseModelHelper.prefix}:{${name}:${type}}`;
     },
 
     isNumericType(type){
         switch (type){
-            case 'integer':
-            case 'number':
-            case 'float':
-            case 'date':
-            case 'timestamp':
-                return true;
-                break;
+        case "integer":
+        case "number":
+        case "float":
+        case "date":
+        case "timestamp":
+            return true;
+            break;
         }
-        return false
+        return false;
     },
 
     parseBoolen(val){
-        if (val == 1 || val == '1'){
-            return true
+        if (val == 1 || val == "1"){
+            return true;
         }
-        return false
+        return false;
     },
 
     writeItem(definition, val){
         
         if (!definition){
-            throw Error(`No definition, val = ${val}`)
+            throw Error(`No definition, val = ${val}`);
         }
 
         if (_.isUndefined(val)){
-            return ''
+            return "";
         }
 
         if (_.isNull(val)){
-            return ''
+            return "";
         }
 
         switch (definition.type){
 
-            case 'json':
-            case 'array':
-            case 'object':            
-                // Could use https://github.com/hughsk/flat instead
-                // see https://medium.com/@stockholmux/store-javascript-objects-in-redis-with-node-js-the-right-way-1e2e89dbbf64           
-                return JSON.stringify(val)
+        case "json":
+        case "array":
+        case "object":            
+            // Could use https://github.com/hughsk/flat instead
+            // see https://medium.com/@stockholmux/store-javascript-objects-in-redis-with-node-js-the-right-way-1e2e89dbbf64           
+            return JSON.stringify(val);
             
-            case 'timestamp':
-            case 'date':
-                if (!val){
-                    return 0
-                }
-                return (new Date(val)).getTime()
+        case "timestamp":
+        case "date":
+            if (!val){
+                return 0;
+            }
+            return (new Date(val)).getTime();
 
-            case 'float':
-            case 'integer':
-            case 'number':
-                return val
+        case "float":
+        case "integer":
+        case "number":
+            return val;
 
-            case 'boolean':
-                return (val) ? 1 : 0
+        case "boolean":
+            return (val) ? 1 : 0;
 
-            case 'string':
-                return _.toString(val)
+        case "string":
+            return _.toString(val);
 
-            default:
-                return val
+        default:
+            return val;
         }
 
     },
@@ -205,71 +207,71 @@ export const BaseModelHelper = {
     parseItem(definition, val){
 
         if (_.isUndefined(definition)){
-            throw Error(`No definition, val = ${val}`)
+            throw Error(`No definition, val = ${val}`);
         }
 
         try {
         
             if (_.isUndefined(val)){
-                return null
+                return null;
             }
 
             switch (definition.type){
 
-                case 'array':
-                case 'object':                           
-                case 'json':       
-                    //console.error(`Parsing ${typeof val} [${val}]`, _.isEmpty(val), !!val)                   
-                    if (val && typeof val == 'string'){
-                        try {
-                            return JSON.parse(val)
-                        }
-                        catch(err){
-                            return null
-                        }
-                    } 
-                    return val
+            case "array":
+            case "object":                           
+            case "json":       
+                //console.error(`Parsing ${typeof val} [${val}]`, _.isEmpty(val), !!val)                   
+                if (val && typeof val == "string"){
+                    try {
+                        return JSON.parse(val);
+                    }
+                    catch(_err){
+                        return null;
+                    }
+                } 
+                return val;
                 
-                case 'timestamp':
-                case 'date':
-                    let epoch = parseInt(val)
-                    if (_.isFinite(epoch)){
-                        return new Date(epoch)
-                    }
-                    return null
+            case "timestamp":
+            case "date":
+                const epoch:number = parseInt(val);
+                if (_.isFinite(epoch)){
+                    return new Date(epoch);
+                }
+                return null;
 
-                case 'integer':
-                    let no = parseInt(val)
-                    if (_.isFinite(no)){
-                        return no
-                    }
-                    return null
+            case "integer":
+                const no:number = parseInt(val);
+                if (_.isFinite(no)){
+                    return no;
+                }
+                return null;
 
-                case 'float':
-                case 'number':
-                    let flno = parseFloat(val)
-                    if (_.isFinite(flno)){
-                        return flno
-                    }
-                    return null
+            case "float":
+            case "number":
+                const flno = parseFloat(val);
+                if (_.isFinite(flno)){
+                    return flno;
+                }
+                return null;
 
-                case 'boolean':
-                    return BaseModelHelper.parseBoolen(val)
+            case "boolean":
+                return BaseModelHelper.parseBoolen(val);
 
-                case 'string':
-                    return val
+            case "string":
+                return val;
 
-                default:
-                    return val
+            default:
+                return val;
             }
         }   
         catch(err){
-            console.error(err)
-            console.error('definition = ', definition)
-            console.error(`val = ${val} (type = ${typeof val})`)
-            return null
+            console.error(err);
+            console.error("definition = ", definition);
+            console.error(`val = ${val} (type = ${typeof val})`);
+            return null;
         }
 
     }
 
-}
+};
