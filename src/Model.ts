@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {UniqueKeyViolationError} from "./errors/UniqueKeyViolationError";
 import {ModelMeta} from "./decorators/Column";
 import {type Field} from "./types";
+import {createClient, type RedisClientType } from 'redis';
 
 /**
  * Base Redis models, based on Nohm (https://maritz.github.io/nohm/)
@@ -16,78 +17,9 @@ export class Model {
 
     ['constructor']: typeof Model
 
+    // ///////////////////////////////////////////////////////////////////////////////////////
 
-    /**
-     * Base constructor. The model should be like;
-     * 
-     *  [
-     *      id: {type:'number', index:true},
-     *      noUsersInGame: {type:'number', defaultValue:0},
-     *      noUsers: {type:'number', defaultValue:0},
-     *      isStarted: {type:'number', defaultValue: 0},
-     *      startTime: {type: 'date', defaultValue: ()=>{return Date.now()}}
-     *      currentQuestionId: {type:'number', defaultValue: 0},
-     *      questionIds: {type:'array', default: []}
-     *  ]
-     * 
-     * @param {object} data The initial data, e.g. {id:0}
-     * @param {object} prefix The prefix, e.g. 'game:'
-     * @param {object} model The model
-     */
-    constructor(data={}) {     
-
-        // Grab model and prefix from the child static methods
-        // NOTE: static methods are just methods on the class constructor
-        var model = this.constructor._modelExtended()
-        
-        if (model){
-            
-            for (let key in model){
-                
-                var item = model[key]
-
-                if (!_.isUndefined(data[key])){
-                    this[key] = data[key]
-                    //this[key] = BaseModelHelper.parseItem(model[key], data[key])
-                }
-                else if (!_.isUndefined(item.defaultValue)){
-                    if (typeof item.defaultValue == 'function'){
-                        this[key] = item.defaultValue()             
-                    }
-                    else {
-                        this[key] = item.defaultValue             
-                    }
-                }
-                else if (!_.isUndefined(item.default)){
-                    if (typeof item.default == 'function'){
-                        this[key] = item.default()             
-                    }
-                    else {
-                        this[key] = item.default             
-                    }                            
-                }                
-                else {
-                    //Logger.error(`${key} is not defined: ${data[key]}`)
-                    this[key] = null
-                }
-                
-            }   
-
-            if (data.id){
-                this.id = data.id
-            } 
-            
-            // If no version, then add
-            if (!data.__v){
-                this.__v = 1;
-            } 
-
-        }     
-
-        // id is required, so create a random id if not set
-        if (!this.id){
-            this.id = BaseModelHelper.generateToken()
-        }
+    constructor() {     
 
     }
 
@@ -102,37 +34,25 @@ export class Model {
 
     // ///////////////////////////////////////////////////////////////////////////////////////
 
-    static getByKey(key){
-        throw new Error('Model.getByKey is deprecated....')
-    }
-
-    // ///////////////////////////////////////////////////////////////////////////////////////
-
-    static setByKey(key, val){
-        throw new Error('Model.setByKey is deprecated....')
-    }
-
-    // ///////////////////////////////////////////////////////////////////////////////////////
-
     /**
      * Return true if a model exists with this id
      * @param {string} id 
      */
-    static async exists(id){
-        let key = BaseModelHelper.getKey(this._name(), 'hash', id)
+    static async exists(id: string){
+        let key = BaseModelHelper.getKey(this.name, 'hash', id)
         return !!(await Model._redisCommand('exists', key))
     }
 
     // ///////////////////////////////////////////////////////////////////////////////////////
 
-    static async count(query){
+    static async count(query: Object){
         let docIds = await this.getIds(query)
         return docIds.length
     }
 
     // ///////////////////////////////////////////////////////////////////////////////////////
 
-    static async distinct(field, query){
+    static async distinct(field: string, query: Object){
         // TODO: speed up. This is slow as it requires loading 
         // all docs then extracting the required field...
         let docs = await this.find(query)
@@ -208,7 +128,7 @@ export class Model {
      * Delete a document from redis, and clear it out from any indices
      * @param {string} id The id of the document to delete
      */
-    static async remove(id){
+    static async remove(id: string){
 
         //Logger.info(`Removing ${id}`)
 
@@ -232,14 +152,14 @@ export class Model {
      * @param {*} query 
      * @param {*} field 
      */
-    static async getField(query, field){
+    static async getField(query: Object, field: string){
         
         let docIds = await this.getIds(query)
 
         return Promise.map(docIds, async (docId)=>{
 
             try {
-                let key = BaseModelHelper.getKey(this._name(), 'hash', docId)
+                let key = BaseModelHelper.getKey(this.name, 'hash', docId)
                 return await Model._redisCommand('hget', key, field)
             }
             catch(e){
@@ -258,14 +178,14 @@ export class Model {
      * @param {*} query 
      * @param {*} field 
      */
-    static async setFieldById(id, field, val){
+    static async setFieldById(id: string, field: string, val: any){
 
         //Logger.debug(`setFieldById(${id}, ${field}, ${val})`)
 
         try {            
             
             let model = this._modelExtended()            
-            let dbkey = BaseModelHelper.getKey(this._name(), 'hash', id)
+            let dbkey = BaseModelHelper.getKey(this.name, 'hash', id)
 
             // Get the old val (need for updating indexes)
             let oldVal = await Model._redisCommand('hget', dbkey, field)
@@ -294,7 +214,7 @@ export class Model {
      * @param {*} query 
      * @param {*} field 
      */
-    static async setField(query, field, val){
+    static async setField(query: Object, field: string, val: any){
         var docIds = await this.getIds(query)
         return Promise.map(docIds, async (id)=>{
             return await this.setFieldById(id, field, val)
@@ -418,12 +338,12 @@ export class Model {
 
     // ///////////////////////////////////////////////////////////////////////////////////////
 
-    static async loadFromId(id){
+    static async loadFromId(id: string){
         
         try {
 
             var model = this._modelExtended()
-            var key = BaseModelHelper.getKey(this._name(), 'hash', id)
+            var key = BaseModelHelper.getKey(this.name, 'hash', id)
             var data = await Model._redisCommand('hgetall', key)
             
             if (!data) {
@@ -453,7 +373,7 @@ export class Model {
             return doc
         }
         catch(err){
-            Logger.error(`[${this._name()}] Error with loadFromId(), id = ${id}`, data, (!data))
+            Logger.error(`[${this.name}] Error with loadFromId(), id = ${id}`, data, (!data))
             Logger.error(err)
             return null
         }
@@ -462,7 +382,7 @@ export class Model {
 
     // ///////////////////////////////////////////////////////////////////////////////////////
 
-    static async findOne(query = {}) {
+    static async findOne(query:Object = {}) {
         
         try {
 
@@ -476,7 +396,7 @@ export class Model {
 
         }
         catch(err){
-            Logger.error(`[${this._name()}] Error with findOne(), query = `, query)
+            Logger.error(`[${this.name}] Error with findOne(), query = `, query)
             Logger.error(err)
             return []
         }
@@ -505,7 +425,7 @@ export class Model {
      * @param {*} query The query, e.g. {name:'fred'} or {name:'fred', age:25}. Note that 
      * query keys must be indexed fields in the schema.
      */
-    static async find(query = {}) {
+    static async find(query:Object = {}) {
         
         try {
 
@@ -526,7 +446,7 @@ export class Model {
 
         }
         catch(err){
-            Logger.error(`[${this._name()}] Error with find(), query = `, query)
+            Logger.error(`[${this.name}] Error with find(), query = `, query)
             Logger.error(err)
             return []
         }
@@ -535,9 +455,9 @@ export class Model {
 
     // ///////////////////////////////////////////////////////////////////////////////////////
 
-    static async getIds(query = {}) {
+    static async getIds(query:Object = {}) {
         
-        const modelName = this._name()
+        const modelName = this.name
         const structuredSearches = this._createStructuredSearchOptions(query);
 
         const uniqueSearch = structuredSearches.find((search) => search.type === 'unique');
@@ -588,7 +508,7 @@ export class Model {
 
     // ///////////////////////////////////////////////////////////////////////////////////////
 
-    static _createStructuredSearchOptions(query) {
+    static _createStructuredSearchOptions(query: Object) {
 
         let model = this._modelExtended()
 
@@ -599,7 +519,7 @@ export class Model {
             const definition = model[key];
 
             if (!definition){
-                throw new Error(`No definition for ${this._name()} ${key}`)
+                throw new Error(`No definition for ${this.name} ${key}`)
             }
 
             const isNumeric = BaseModelHelper.isNumericType(definition.type)
@@ -633,7 +553,7 @@ export class Model {
     // ///////////////////////////////////////////////////////////////////////////////////////
 
     static async _uniqueSearch(options) {
-        const modelName = this._name()
+        const modelName = this.name
         const model = this._modelExtended()
         let val = BaseModelHelper.writeItem(model[search.key], search.value)
         const key = `${BaseModelHelper.getKey(modelName, 'unique')}:${options.key}:${val}`;
@@ -650,7 +570,7 @@ export class Model {
 
     static async _setSearch(searches) {
         
-        const modelName = this._name()        
+        const modelName = this.name        
         const model = this._modelExtended()
 
         const keys = searches.map((search) => {
@@ -707,7 +627,7 @@ export class Model {
      */
     static async _singleZSetSearch(search) {
         
-        const modelName = this._name()          
+        const modelName = this.name          
         const model = this._modelExtended()
         const key = `${BaseModelHelper.getKey(modelName, 'scoredindex')}:${search.key}`;            
         let command = 'zrangebyscore';
@@ -787,7 +707,7 @@ export class Model {
         //prof.start('_cleanIndices')
         let idList = await this.getIds()
 
-        Logger.debug(`[${this._name()}._cleanIndices] found ${idList.length} items`)
+        Logger.debug(`[${this.name}._cleanIndices] found ${idList.length} items`)
 
         if (!_.isArray(idList)){
             return
@@ -799,7 +719,7 @@ export class Model {
             try {
                 let exists = await this.exists(id)
                 if (!exists){
-                    Logger.warn(`[${this._name()}._cleanIndices] ${id} does not exist`)
+                    Logger.warn(`[${this.name}._cleanIndices] ${id} does not exist`)
                     await this.remove(id)
                 }
             }
@@ -848,7 +768,7 @@ export class Model {
 
         }
         catch(e){
-            Logger.error(`[${this._name()}] Error with _clearExpireIndices()`)
+            Logger.error(`[${this.name}] Error with _clearExpireIndices()`)
             Logger.error(e)
         }
 
@@ -908,7 +828,7 @@ export class Model {
         propVal = BaseModelHelper.writeItem(model[key], propVal)
         oldValue = BaseModelHelper.writeItem(model[key], oldValue)
 
-        var modelName = this._name()
+        var modelName = this.name
 
         var keyIndex = BaseModelHelper.getKey(modelName, 'index')
         var keyUnique = BaseModelHelper.getKey(modelName, 'unique')
@@ -1035,6 +955,7 @@ export class Model {
     //
     // Sync support
     //
+    /*
 
     async sync(PostgresModel){
 
@@ -1091,12 +1012,9 @@ export class Model {
         let storage = new StorePostgres(PostgresModel, this, options)
         return await storage.sync()
     }
-
+    
     // ///////////////////////////////////////////////////////////////////////////////////////
 
-    /**
-     * Return the data only
-     */
     dataValues(){
         // Only give fields in the model
         let model = this.constructor._modelExtended()
@@ -1107,4 +1025,5 @@ export class Model {
         }  
         return clean;
     }
+    */
 }

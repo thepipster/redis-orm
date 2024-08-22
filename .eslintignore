@@ -1,0 +1,8 @@
+coverage/**/*
+dist/**/*
+keys/**/*
+node_modules/**/*
+src/services/ChargePoint.old.js
+src/services/ChargePoint/ChargePointPrivate.ts
+src/services/ChargePoint/samples/**/*
+src/services/ChargePointGQL.old.js
