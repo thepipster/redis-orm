@@ -79,30 +79,3 @@ offset
 * generateToken(length)
 * generateMock()
 * getUUID()
-
-## Syncing
-
-Support for slow sync with a Postgres or Mongo database is provided;
-
-| Para                  | Descriptions  |
-|-----------------------|---------------------------------------------------------|
-| mode                  | The sync direction; 'sync', 'postgres-to-redis', 'redis-to-postgres'  |
-| indexField            | The index field used in both databases (defaults to 'uuid' or 'uid' if found in the Redis schema) |
-| basePostgresQuery     | Allows you to overide so you can sync just a single item   |
-| baseRedisQuery        | Allows you to overide so you can sync just a single item |
-
-For example, this would sync a single user from redis to postgress
-
-```js
-    let options = {
-            mode: 'redis-to-postgres',
-            indexField: 'uuid',
-            baseRedisQuery: {uid: 'KIWglD3T1tXHMGW2qmvmDy8RXmF3'},
-            basePostgresQuery: {userUid: 'KIWglD3T1tXHMGW2qmvmDy8RXmF3'}   
-    }
-```
-
-* sync(PostgresModel)
-* syncAllToPostgres(PostgresModel, opts)
-* syncAllToRedis(PostgresModel, opts)
-* syncAll(PostgresModel, opts)
